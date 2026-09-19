@@ -261,6 +261,17 @@ Reload Cursor after creating the symlink. The Cursor plugin package exposes the
 shared `ast-index` skill, a project rule in `plugin/rules/`, and a Cursor-specific
 `initialize-ast-index` command that writes `.cursor/rules/ast-index.mdc`.
 
+### OpenCode 2 Plugin
+
+The [OpenCode integration](plugin/opencode/README.md) includes a native
+JavaScript plugin, the shared `ast-index` skill, and `/initialize-ast-index`.
+It refreshes existing indexes on startup and after edits, respects an active
+watcher, and guides structural searches toward `ast-index`.
+
+Follow the [local installation instructions](plugin/opencode/README.md#install-from-this-checkout)
+to link or copy the three components into OpenCode's global configuration or
+a project's `.opencode` directory. No plugin build step is needed.
+
 ### Gemini CLI
 
 ```bash

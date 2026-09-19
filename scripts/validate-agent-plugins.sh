@@ -118,6 +118,9 @@ for path in [
     "plugin/skills/ast-index/SKILL.md",
     "plugin/rules/ast-index.mdc",
     "plugin/commands-cursor/initialize-ast-index.md",
+    "plugin/opencode/ast-index.js",
+    "plugin/opencode/README.md",
+    "plugin/commands-opencode/initialize-ast-index.md",
 ]:
     require_file(path)
 

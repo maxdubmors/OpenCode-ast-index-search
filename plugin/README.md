@@ -8,9 +8,11 @@ This directory is the shared payload for agent integrations.
 - Codex: `.codex-plugin/plugin.json` and `skills/`.
 - Cursor: `.cursor-plugin/plugin.json`, `skills/`, `rules/`, and
   `commands-cursor/`.
+- OpenCode: `opencode/ast-index.js`, `skills/`, and `commands-opencode/`.
+  See [installation and testing](opencode/README.md).
 
-The Claude commands are intentionally separate from the Cursor command because
-they write different project configuration files.
+Setup commands are separate for Claude Code, Cursor, and OpenCode because each
+integration has its own project setup workflow.
 
 For Claude Code, use `/initialize` as the default entrypoint. It auto-detects
 single-stack, KMP, and polyglot repos, then configures `.claude/settings.json`
