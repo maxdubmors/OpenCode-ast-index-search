@@ -26,39 +26,49 @@ async function setup(ctx) {
   }
 
   async function refresh(sessionStart) {
-    if (sessionStart && process.env.AST_INDEX_HOOK_SKIP_SESSION_START === "1") return;
+    if (sessionStart && process.env.AST_INDEX_HOOK_SKIP_SESSION_START === "1") return false;
     try {
       try {
         await run("watch-status", "--quiet");
-        return;
+        return true;
       } catch (error) {
         if (error.code !== 1) throw error;
       }
 
       const { stdout } = await run("db-path");
       try {
-        if (!(await stat(stdout.trim())).isFile()) return;
+        if (!(await stat(stdout.trim())).isFile()) return false;
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
         if (sessionStart) log("No index yet. Run /initialize-ast-index in this project.");
-        return;
+        return false;
       }
 
       const delay = sessionStart
         ? debounce("AST_INDEX_SESSION_DEBOUNCE_MS", "0")
         : debounce("AST_INDEX_HOOK_DEBOUNCE_MS", "5000");
       await run("update", "--background", "--debounce-ms", delay);
+      return true;
     } catch (error) {
       log(error.code === "ENOENT"
         ? "ast-index is not on PATH. Install the CLI, then run /initialize-ast-index."
         : `Could not queue index refresh: ${error.message}`);
+      return false;
     }
   }
 
-  // Plugin initialization also covers opening an existing session.
-  await refresh(true);
+  // Plugin initialization also covers opening an existing session. Skip the
+  // first prompt refresh when setup already left the index fresh so a cold
+  // start does not queue two identical background updates back to back.
+  let skipFirstPrompt = await refresh(true);
 
-  await ctx.session.hook("prompt", () => refresh(true));
+  await ctx.session.hook("prompt", async () => {
+    if (skipFirstPrompt) {
+      skipFirstPrompt = false;
+      return;
+    }
+    await refresh(true);
+  });
   await ctx.session.hook("context", (event) => {
     event.system.push({ type: "text", text: guidance });
   });
@@ -69,10 +79,14 @@ async function setup(ctx) {
     if (event.tool === "grep" && typeof pattern === "string" &&
         pattern.length >= 3 && /^[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)*$/.test(pattern)) {
       const reminder = `ast-index: '${pattern}' looks like a symbol. Prefer ast-index symbol, usages, refs, or explore for structural searches.`;
-      const content = event.result.content;
-      event.result.content = typeof content === "string"
-        ? `${content}\n\n${reminder}`
-        : [...content, { type: "text", text: reminder }];
+      const result = event.result;
+      if (!result) return;
+      const content = result.content;
+      if (typeof content === "string") {
+        result.content = `${content}\n\n${reminder}`;
+      } else if (Array.isArray(content)) {
+        result.content = [...content, { type: "text", text: reminder }];
+      }
     }
   });
 }

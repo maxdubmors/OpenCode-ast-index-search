@@ -205,6 +205,34 @@ plugin_readme = require_text("plugin/README.md")
 if plugin_readme and "/initialize" not in plugin_readme:
     errors.append("plugin/README.md: must mention /initialize for Claude plugin testing")
 
+opencode_js = require_text("plugin/opencode/ast-index.js")
+if opencode_js:
+    for label, snippet in {
+        "watch-status check": "watch-status",
+        "db-path check": "db-path",
+        "background update": '"update"',
+        "prompt hook": '"prompt"',
+        "edit hook": '"execute.after"',
+        "no-index hint": "initialize-ast-index",
+    }.items():
+        if snippet not in opencode_js:
+            errors.append(f"plugin/opencode/ast-index.js: missing {label} snippet {snippet!r}")
+
+opencode_cmd = require_text("plugin/commands-opencode/initialize-ast-index.md")
+if opencode_cmd:
+    for label, snippet in {
+        "version step": "ast-index version",
+        "stats step": "ast-index stats",
+        "rebuild step": "ast-index rebuild",
+        "search check": "ast-index search",
+    }.items():
+        if snippet not in opencode_cmd:
+            errors.append(f"plugin/commands-opencode/initialize-ast-index.md: missing {label} snippet {snippet!r}")
+
+opencode_readme = require_text("plugin/opencode/README.md")
+if opencode_readme and "/initialize-ast-index" not in opencode_readme:
+    errors.append("plugin/opencode/README.md: must mention /initialize-ast-index")
+
 if errors:
     for error in errors:
         print(f"ERROR: {error}")

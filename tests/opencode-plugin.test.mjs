@@ -6,7 +6,7 @@ import test from "node:test";
 import plugin from "../plugin/opencode/ast-index.js";
 
 async function fixture(t, options = {}) {
-  const root = await mkdtemp(join(tmpdir(), "ast-index opencode-"));
+  const root = await mkdtemp(join(tmpdir(), "ast-index-opencode-"));
   const bin = join(root, "bin");
   await mkdir(bin);
   const saved = { ...process.env };
@@ -54,6 +54,7 @@ if (args[0] === 'update') process.exit(options.failUpdate ? 2 : 0);
 test("refreshes startup, prompts, and every edit in the project directory", async (t) => {
   const { root, hooks, calls } = await fixture(t);
   await hooks.prompt({});
+  await hooks.prompt({});
   await Promise.all(Array.from({ length: 3 }, () => hooks["execute.after"]({ tool: "edit", status: "completed" })));
   await hooks["execute.after"]({ tool: "read", status: "completed" });
   const actual = await calls();
@@ -63,6 +64,24 @@ test("refreshes startup, prompts, and every edit in the project directory", asyn
     ["update", "--background", "--debounce-ms", "0"],
     ...Array.from({ length: 3 }, () => ["update", "--background", "--debounce-ms", "5000"]),
   ]);
+});
+
+test("skips the first prompt refresh when setup already refreshed", async (t) => {
+  const { calls, hooks } = await fixture(t);
+  const setupUpdates = (await calls()).filter((call) => call.args[0] === "update").length;
+  assert.equal(setupUpdates, 1);
+  await hooks.prompt({});
+  assert.equal((await calls()).filter((call) => call.args[0] === "update").length, 1);
+  await hooks.prompt({});
+  assert.equal((await calls()).filter((call) => call.args[0] === "update").length, 2);
+});
+
+test("retries the first prompt when setup found no index", async (t) => {
+  const { calls, hooks } = await fixture(t, { noIndex: true });
+  await hooks.prompt({});
+  const actual = await calls();
+  assert.equal(actual.filter((call) => call.args[0] === "update").length, 0);
+  assert.equal(actual.filter((call) => call.args[0] === "db-path").length, 2);
 });
 
 test("leaves updates to an active watcher", async (t) => {
@@ -140,6 +159,20 @@ test("refreshes all supported edit tools and ignores failed tools", async (t) =>
     await hooks["execute.after"]({ tool, status: "error", error: { message: "failed" } });
   }
   assert.deepEqual(await calls(), before);
+});
+
+test("leaves non-string non-array grep content untouched", async (t) => {
+  const { hooks } = await fixture(t, { watching: true });
+  for (const content of [undefined, null, 42, { type: "text", text: "found" }]) {
+    const result = { content, metadata: { matches: 1 } };
+    await hooks["execute.after"]({
+      tool: "grep", input: { pattern: "UserService" }, status: "completed", result,
+    });
+    assert.equal(result.content, content);
+    assert.deepEqual(result.metadata, { matches: 1 });
+  }
+  const noResult = { tool: "grep", input: { pattern: "UserService" }, status: "completed" };
+  await hooks["execute.after"](noResult);
 });
 
 test("preserves structured tool results and metadata when appending a reminder", async (t) => {

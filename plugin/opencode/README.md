@@ -13,18 +13,30 @@ Run from the repository root on Linux or macOS:
 plugin_source="$(pwd)/plugin"
 opencode_config="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 mkdir -p "$opencode_config/plugins" "$opencode_config/skills" "$opencode_config/commands"
-ln -s "$plugin_source/opencode/ast-index.js" "$opencode_config/plugins/ast-index.js"
-ln -s "$plugin_source/skills/ast-index" "$opencode_config/skills/ast-index"
-ln -s "$plugin_source/commands-opencode/initialize-ast-index.md" "$opencode_config/commands/initialize-ast-index.md"
+ln -sfn "$plugin_source/opencode/ast-index.js" "$opencode_config/plugins/ast-index.js"
+ln -sfn "$plugin_source/skills/ast-index" "$opencode_config/skills/ast-index"
+ln -sfn "$plugin_source/commands-opencode/initialize-ast-index.md" "$opencode_config/commands/initialize-ast-index.md"
 ```
 
 For project-only installation, set `opencode_config` to the absolute path of
 that project's `.opencode` directory instead. Copying the files and the entire
-skill directory also works. On Windows, put the native `ast-index.exe` on PATH;
-the refresh hooks launch it directly rather than through an npm `.cmd` shim.
-Existing files are not
-overwritten by these commands. Install at only one scope to avoid duplicate
-hooks. Keep the checkout at this path when using symlinks.
+skill directory also works. Re-running the commands above replaces the links,
+so reinstalling after a checkout move is safe. On Windows, put the native
+`ast-index.exe` on PATH; the refresh hooks launch it directly rather than
+through an npm `.cmd` shim. With PowerShell, copy instead of symlinking
+(symlinks need elevated privileges):
+
+```powershell
+$plugin_source = "$PWD/plugin"
+$opencode_config = "$env:APPDATA/opencode"
+New-Item -ItemType Directory -Force "$opencode_config/plugins", "$opencode_config/skills", "$opencode_config/commands" | Out-Null
+Copy-Item "$plugin_source/opencode/ast-index.js" "$opencode_config/plugins/ast-index.js" -Force
+Copy-Item "$plugin_source/skills/ast-index" "$opencode_config/skills/ast-index" -Recurse -Force
+Copy-Item "$plugin_source/commands-opencode/initialize-ast-index.md" "$opencode_config/commands/initialize-ast-index.md" -Force
+```
+
+Install at only one scope to avoid duplicate hooks. Keep the checkout at
+this path when using symlinks.
 
 Restart OpenCode (including its background server if it uses one), open the
 target project, and run `/initialize-ast-index`. The command verifies the CLI,
@@ -35,6 +47,8 @@ the `ast-index` skill and command appear in OpenCode.
 
 - At plugin load and before each user prompt, queue an incremental background
   update if an index already exists. Loading covers resumed sessions too.
+  The first prompt after load is skipped when setup already refreshed, so a
+  cold start queues a single update rather than two.
 - After successful `edit`, `write`, or `apply_patch` tools, queue a trailing-debounced
   background update. The CLI's coordinator handles edit bursts and edits that
   arrive during an update.
