@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use this agent to review a set of changes before they ship — staged/unstaged diff, a specific commit range, a PR description, or "the latest commit". The agent reads the diff against project rules in CLAUDE.md and .claude/rules/*, runs the build and test suite, and reports what's good, what's wrong, and what's missing. It does NOT fix anything itself — the point is feedback, not rework.
+description: Use this agent to review a set of changes before they ship — staged/unstaged diff, a specific commit range, a PR description, or "the latest commit". The agent reads the diff against project rules in AGENTS.md and .claude/rules/*, runs the build and test suite, and reports what's good, what's wrong, and what's missing. It does NOT fix anything itself — the point is feedback, not rework.
 tools: Bash, Read, Grep, Glob
 ---
 
